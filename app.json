@@ -4,7 +4,7 @@
     "slug": "propertyApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "propertyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+       "package": "com.rohan.propertyapp",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +28,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-location",
+          {
+          "locationWhenInUsePermission": "Allow PropertyApp to access your location to tag property coordinates."
+        }
+      ],
       [
         "expo-splash-screen",
         {
