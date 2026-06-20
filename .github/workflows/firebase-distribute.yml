@@ -29,20 +29,22 @@ jobs:
       - name: Decode keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
-      - name: Write signing config to gradle.properties
-        run: |
-          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/gradle.properties
       - name: Patch build.gradle release signing
         run: |
           python3 - << 'EOF'
+          import re
           with open('android/app/build.gradle', 'r') as f:
               content = f.read()
-          release_config = '        release {\n            storeFile file(MYAPP_UPLOAD_STORE_FILE)\n            storePassword MYAPP_UPLOAD_STORE_PASSWORD\n            keyAlias MYAPP_UPLOAD_KEY_ALIAS\n            keyPassword MYAPP_UPLOAD_KEY_PASSWORD\n        }\n'
-          content = content.replace('signingConfigs {\n', 'signingConfigs {\n' + release_config)
-          content = content.replace('signingConfig signingConfigs.debug\n            def enableShrinkResources', 'signingConfig signingConfigs.release\n            def enableShrinkResources')
+          release_config = '''        release {
+                  storeFile file("../app/release.keystore")
+                  storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
+                  keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
+                  keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
+              }
+          '''
+          if 'signingConfigs {' in content and 'release {' not in content:
+              content = content.replace('signingConfigs {', 'signingConfigs {\n' + release_config)
+          content = re.sub(r'signingConfig signingConfigs\.debug', 'signingConfig signingConfigs.release', content)
           with open('android/app/build.gradle', 'w') as f:
               f.write(content)
           print("Patched!")
@@ -50,6 +52,10 @@ jobs:
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+        env:
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
