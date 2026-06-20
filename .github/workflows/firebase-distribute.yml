@@ -34,13 +34,23 @@ jobs:
         run: |
           echo "=== Before patch ==="
           cat build.gradle
-          
+
           if ! grep -q "signingConfigs" build.gradle; then
-            sed -i 's/android {/android {\n    signingConfigs {\n        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")\n            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")\n            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")\n        }\n    }/' build.gradle
+            cat > /tmp/signing_block.txt << 'EOF'
+    signingConfigs {
+        release {
+            storeFile file("release.keystore")
+            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
+            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
+            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
+        }
+    }
+EOF
+            sed -i "/^android {/r /tmp/signing_block.txt" build.gradle
           fi
-          
+
           sed -i 's/signingConfig signingConfigs\.debug/signingConfig signingConfigs.release/g' build.gradle
-          
+
           echo "=== After patch ==="
           cat build.gradle
       - name: Build release APK
