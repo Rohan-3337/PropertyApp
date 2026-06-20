@@ -36,16 +36,7 @@ jobs:
           cat build.gradle
 
           if ! grep -q "signingConfigs" build.gradle; then
-            cat > /tmp/signing_block.txt << 'EOF'
-    signingConfigs {
-        release {
-            storeFile file("release.keystore")
-            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
-            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
-            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
-        }
-    }
-EOF
+            printf '    signingConfigs {\n        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")\n            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")\n            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")\n        }\n    }\n' > /tmp/signing_block.txt
             sed -i "/^android {/r /tmp/signing_block.txt" build.gradle
           fi
 
