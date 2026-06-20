@@ -29,12 +29,24 @@ jobs:
       - name: Decode keystore
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+      - name: Debug build.gradle before patch
+        working-directory: android/app
+        run: |
+          echo "=== FULL build.gradle ==="
+          cat -n build.gradle
+          echo ""
+          echo "=== Checking android { line ==="
+          grep -n "^android {" build.gradle || echo "NOT FOUND: ^android {"
+          grep -n "android {" build.gradle || echo "NOT FOUND: android {"
+          echo ""
+          echo "=== Checking signingConfigs ==="
+          grep -n "signingConfigs" build.gradle || echo "NOT FOUND: signingConfigs"
+          echo ""
+          echo "=== Checking signingConfig debug ==="
+          grep -n "signingConfig" build.gradle || echo "NOT FOUND: signingConfig"
       - name: Patch build.gradle release signing
         working-directory: android/app
         run: |
-          echo "=== Before patch ==="
-          cat build.gradle
-
           if ! grep -q "signingConfigs" build.gradle; then
             printf '    signingConfigs {\n        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")\n            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")\n            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")\n        }\n    }\n' > /tmp/signing_block.txt
             sed -i "/^android {/r /tmp/signing_block.txt" build.gradle
@@ -43,7 +55,7 @@ jobs:
           sed -i 's/signingConfig signingConfigs\.debug/signingConfig signingConfigs.release/g' build.gradle
 
           echo "=== After patch ==="
-          cat build.gradle
+          cat -n build.gradle
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
