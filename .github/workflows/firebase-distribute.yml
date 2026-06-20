@@ -17,7 +17,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
       - name: Install deps
-        run: npm ci
+        run: npm install --legacy-peer-deps
       - name: Expo prebuild
         run: npx expo prebuild --platform android --clean
         env:
