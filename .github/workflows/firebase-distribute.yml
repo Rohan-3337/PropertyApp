@@ -30,25 +30,19 @@ jobs:
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
       - name: Patch build.gradle release signing
+        working-directory: android/app
         run: |
-          python3 - << 'EOF'
-          import re
-          with open('android/app/build.gradle', 'r') as f:
-              content = f.read()
-          release_config = '''        release {
-                  storeFile file("../app/release.keystore")
-                  storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
-                  keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
-                  keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
-              }
-          '''
-          if 'signingConfigs {' in content and 'release {' not in content:
-              content = content.replace('signingConfigs {', 'signingConfigs {\n' + release_config)
-          content = re.sub(r'signingConfig signingConfigs\.debug', 'signingConfig signingConfigs.release', content)
-          with open('android/app/build.gradle', 'w') as f:
-              f.write(content)
-          print("Patched!")
-          EOF
+          echo "=== Before patch ==="
+          cat build.gradle
+          
+          if ! grep -q "signingConfigs" build.gradle; then
+            sed -i 's/android {/android {\n    signingConfigs {\n        release {\n            storeFile file("release.keystore")\n            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")\n            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")\n            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")\n        }\n    }/' build.gradle
+          fi
+          
+          sed -i 's/signingConfig signingConfigs\.debug/signingConfig signingConfigs.release/g' build.gradle
+          
+          echo "=== After patch ==="
+          cat build.gradle
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
